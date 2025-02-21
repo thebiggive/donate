@@ -205,6 +205,15 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
         this.addressSuggestions = suggestions;
       }
     });
+
+    // must have at least £3 match funds remaining to match 3 donations.
+    if (this.campaign.matchFundsRemaining < 3) {
+      this.insufficientMatchFundsAvailable = {
+        description: 'There are no match funds available',
+        maxMatchable: {amountInPence: 0, currency: 'GBP'},
+        type: "INSUFFICIENT_MATCH_FUNDS"
+      };
+    }
   }
 
   ngAfterViewInit() {
@@ -514,6 +523,27 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
     } else {
       this.amountErrorMessage = undefined;
 
+      const totalMatchableAmount = this.getDonationAmountPence() * 3;
+
+      console.log({totalMatchableAmount, unmatched: this.unmatched, matchFundsRemaining: this.campaign.matchFundsRemaining});
+
+      if (totalMatchableAmount > (this.campaign.matchFundsRemaining * 100) && !this.unmatched) {
+        errorFound = true;
+        console.error("error found 552");
+        this.amountErrorMessage = (this.campaign.matchFundsRemaining > 3 ?
+          `There is only funding available to match donations of up to ${Math.floor(this.campaign.matchFundsRemaining / 3)}. ` +
+          'Please choose a smaller donation amount, or make an unmatched donation.'
+          :
+          `There is no funding available to match donations` +
+          'Please make an unmatched donation.');
+
+        this.insufficientMatchFundsAvailable = {
+          description: this.amountErrorMessage,
+          maxMatchable: {amountInPence: 0, currency: 'GBP'},
+          type: "INSUFFICIENT_MATCH_FUNDS"
+        };
+      }
+
       const askingToMatchMoreThanAvailable =
         this.insufficientMatchFundsAvailable &&
         ! this.unmatched &&
@@ -522,9 +552,11 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
       if (askingToMatchMoreThanAvailable) {
         errorFound = true;
         const formattedMax = MoneyPipe.format(this.insufficientMatchFundsAvailable!.maxMatchable);
-        this.amountErrorMessage =
+        this.amountErrorMessage = this.insufficientMatchFundsAvailable!.maxMatchable.amountInPence > 0 ?
           `There is only funding available to match donations of up to ${formattedMax}. ` +
-          'Please choose a smaller donation amount, or make an unmatched donation.';
+          'Please choose a smaller donation amount, or make an unmatched donation.' :
+          `There is no funding available to match donations. ` +
+          'Please make an unmatched donation.';
 
         this.toast.showError(this.amountErrorMessage!);
       }
