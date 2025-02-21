@@ -56,6 +56,12 @@
               </div>
               <p>This amount will be taken from your account today and once every month in future</p>
 
+              @if (! this.unmatched) {
+               <!-- todo - replace the below with alternate copy in case of unmatched or insufficent match funds.
+               Maybe stop it changing while visible as that's maybe confusing. -->
+                <p>Your first three donations will be match-funded. </p>
+              }
+
               <div aria-live="polite" >
                 @if (amountErrorMessage) {
                   <div class="error">
@@ -68,16 +74,20 @@
                   @if (insufficientMatchFundsAvailable.maxMatchable.amountInPence === 0) {
                     There are no match funds currently available for this campaign. Remember, every penny helps.
                       Please continue to make an <strong>unmatched donation</strong> to the charity!
+                    <mat-checkbox formControlName="unmatched" id="unmatched">
+                      Make an unmatched donation
+                    </mat-checkbox>
                   } @else {
-                    There are limited match funds available.
-                    Remember, every penny helps.
-                      Please donate up to {{insufficientMatchFundsAvailable.maxMatchable | money}}, or make an
-                    <strong>unmatched donation</strong> to the charity!
+                    <p><span class="error">There are limited match funds available</span>, but every penny helps, so you have two options:</p>
+                    <ol>
+                      <li>Reduce your donation amount to a maximum of {{insufficientMatchFundsAvailable.maxMatchable | money}}, or </li>
+                      <li> <label for="unmatched" >Make an unmatched donation to the charity: </label>
+                        <mat-checkbox formControlName="unmatched" id="unmatched">
+                        </mat-checkbox>
+                      </li>
+                    </ol>
                   }
                   </p>
-                <mat-checkbox formControlName="unmatched" id="unmatched">
-                  Make an unmatched donation
-                </mat-checkbox>
                 }
               </div>
 

@@ -321,13 +321,13 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
         } else {
           this.submitErrorMessage = message;
         }
-        this.toast.showError(message);
+        this.toast.showError(JSON.stringify(error) + " --- " +  message);
         this.submitting = false;
       }
     })
   }
 
-  private get unmatched(): boolean {
+  protected get unmatched(): boolean {
     return !!this.mandateForm.value.unmatched;
   }
 
