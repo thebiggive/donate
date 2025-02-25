@@ -9,7 +9,7 @@ import {MatHint, MatInput} from "@angular/material/input";
 import {MatButton, MatIconAnchor} from "@angular/material/button";
 import {MatIcon} from "@angular/material/icon";
 import {Person} from "../person.model";
-import {RegularGivingService, StartMandateParams} from "../regularGiving.service";
+import {MandateCreateResponse, RegularGivingService, StartMandateParams} from "../regularGiving.service";
 import {Mandate, Money} from '../mandate.model';
 import {myRegularGivingPath} from "../app-routing";
 import {requiredNotBlankValidator} from "../validators/notBlank";
@@ -329,8 +329,22 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
       home: home,
       unmatched: this.unmatched,
     }).subscribe({
-      next: async (mandate: Mandate) => {
-        await this.router.navigateByUrl(`/${myRegularGivingPath}/${mandate.id}`);
+      next: async (response: MandateCreateResponse) => {
+        if (response.paymentIntent) {
+          const nextActionResult = await this.stripeService.handleNextAction(response.paymentIntent.client_secret);
+
+          if (nextActionResult.error) {
+            this.submitErrorMessage = nextActionResult.error.message;
+            this.submitting = false;
+
+            // @todo-regular-giving DON-1119 - cancel new mandate here to release match funds and/or, or consider providing
+            // a way for donor to retry the 3DS or other next action on the existing mandate, without calling matchbot
+            // to create a new one.
+            return;
+          }
+        }
+
+        await this.router.navigateByUrl(`/${myRegularGivingPath}/${response.mandate.id}`);
       },
       error: (error: BackendError) => {
         const message = errorDescription(error);

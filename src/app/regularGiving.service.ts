@@ -5,6 +5,7 @@ import {getPersonAuthHttpOptions, IdentityService} from "./identity.service";
 import {HttpClient, HttpHeaders} from "@angular/common/http";
 import {environment} from "../environments/environment";
 import {map, switchMap} from "rxjs/operators";
+import {PaymentIntent, PaymentMethod} from '@stripe/stripe-js';
 
 /**
  * Details of a desired new regular giving mandate sent to Matchbot to create it. Deseralized on the matchbot side
@@ -54,6 +55,8 @@ export type StartMandateParams = {
 };
 
 type PersonAuthHttpOptions = {headers: HttpHeaders };
+export type MandateCreateResponse = {mandate: Mandate, paymentIntent: undefined | { status: 'requires_action', client_secret: string }}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -63,14 +66,14 @@ export class RegularGivingService {
     private identityService: IdentityService,
   ) {}
 
-  public startMandate(mandate: StartMandateParams): Observable<Mandate> {
+  public startMandate(mandate: StartMandateParams): Observable<MandateCreateResponse> {
     return this.withLoggedInDonor((personAuthHttpOptions: PersonAuthHttpOptions) => {
       const IDAndJWT = this.identityService.getIdAndJWT()!;
       return this.http.post<unknown>(
         `${environment.donationsApiPrefix}/people/${IDAndJWT.id}/regular-giving`,
         mandate,
         personAuthHttpOptions,
-      ) as Observable<Mandate>;
+      ) as Observable<MandateCreateResponse>;
     });
   }
 

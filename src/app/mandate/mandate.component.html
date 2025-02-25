@@ -1,5 +1,17 @@
 <main class="b-container">
+  @if (mandate.status === 'pending') {
+    @if (timedOut) {
+      <p class="error" aria-live="assertive">
+        Your regular giving was not processed immediately &ndash; it may be that there is a short delay because we're very
+        busy. Please refresh this page to see the latest status. We'll also email you when your regular giving mandate
+        is processed.
+      </p>
+    } @else {
+      <mat-spinner color="primary" diameter="30"
+                   aria-label="Processing your regular giving mandate"></mat-spinner>
 
+    }
+  } @else {
   <div id="banner-thank-you"></div>
 
   <div>
@@ -124,4 +136,5 @@
       </div>
     </div>
   </div>
+  }
 </main>
