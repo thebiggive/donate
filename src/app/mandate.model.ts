@@ -1,6 +1,6 @@
 export type Money = {
   "amountInPence": number,
-  "currency": "GBP"
+  "currency": "GBP"|"USD"
 };
 
 export type Mandate = {

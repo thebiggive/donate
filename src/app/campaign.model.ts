@@ -36,7 +36,13 @@ export interface Campaign {
     impactReporting: string | null;
     impactSummary: string | null;
     isMatched: boolean;
+
+    /**
+     * Total value of remaining match funds that may be used for this campaign in currency major units.
+     * Is reduced when a donation is confirmed or pre-authorised for this campaign or one it shares funds with.
+     */
     matchFundsRemaining: number;
+
     matchFundsTotal: number;
     parentUsesSharedFunds: boolean;
     problem: string | null;

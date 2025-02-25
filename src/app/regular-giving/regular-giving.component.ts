@@ -10,7 +10,7 @@ import {MatButton, MatIconAnchor} from "@angular/material/button";
 import {MatIcon} from "@angular/material/icon";
 import {Person} from "../person.model";
 import {RegularGivingService, StartMandateParams} from "../regularGiving.service";
-import {Mandate} from '../mandate.model';
+import {Mandate, Money} from '../mandate.model';
 import {myRegularGivingPath} from "../app-routing";
 import {requiredNotBlankValidator} from "../validators/notBlank";
 import {getCurrencyMinValidator} from "../validators/currency-min";
@@ -45,7 +45,6 @@ import {
   BackendError,
   errorDescription,
   errorDetails,
-  InsufficientFundsDetail,
   isInsufficientMatchFundsError
 } from "../backendError";
 
@@ -123,7 +122,21 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
    * Defined if we have discovered that there are/were not enough match funds to cover the initial donations the donor
    * wanted to make. They will have the option to try making a smaller matched donation, or donate without matching.
    */
-  protected insufficientMatchFundsAvailable: InsufficientFundsDetail | undefined  = undefined;
+  protected insufficientMatchFundsAvailable = false;
+
+
+  /**
+   * Amount of match funds remaining based on campaign information loaded with the page. Does not always account for
+   * any very recent or concurrent usage of match funds by another donor.
+   */
+    // @ts-expect-error - initialised in ngOnInit rather than constructor.
+  protected maximumMatchableDonation: Money;
+
+  /** Used to distinguish between the case where there are zero match funds available on the campaign as seen at page
+   * load, and a case where there are initially zero match funds and then we later discover that they are not enough
+   * for the donor, perhaps due to concurrent usage.
+   */
+  protected matchFundsZeroOnLoad = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -205,6 +218,13 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
         this.addressSuggestions = suggestions;
       }
     });
+
+    this.maximumMatchableDonation = maximumMatchableDonationGivenCampaign(this.campaign);
+
+    if (this.maximumMatchableDonation.amountInPence === 0) {
+      this.matchFundsZeroOnLoad = true;
+      this.mandateForm.patchValue({unmatched: true});
+    }
   }
 
   ngAfterViewInit() {
@@ -316,18 +336,19 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
         const message = errorDescription(error);
 
         if (isInsufficientMatchFundsError(error)) {
-          this.insufficientMatchFundsAvailable = errorDetails(error);
+          this.insufficientMatchFundsAvailable = true;
+          this.maximumMatchableDonation = errorDetails(error).maxMatchable;
           this.selectStep(0);
         } else {
           this.submitErrorMessage = message;
         }
-        this.toast.showError(message);
+        this.toast.showError(JSON.stringify(error) + " --- " +  message);
         this.submitting = false;
       }
     })
   }
 
-  private get unmatched(): boolean {
+  protected get unmatched(): boolean {
     return !!this.mandateForm.value.unmatched;
   }
 
@@ -514,18 +535,13 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
     } else {
       this.amountErrorMessage = undefined;
 
-      const askingToMatchMoreThanAvailable =
-        this.insufficientMatchFundsAvailable &&
+      this.insufficientMatchFundsAvailable =
         ! this.unmatched &&
-        this.getDonationAmountPence() > this.insufficientMatchFundsAvailable.maxMatchable.amountInPence;
+        this.getDonationAmountPence() > this.maximumMatchableDonation.amountInPence;
 
-      if (askingToMatchMoreThanAvailable) {
+      if (this.insufficientMatchFundsAvailable) {
+        this.insufficientMatchFundsAvailable = true;
         errorFound = true;
-        const formattedMax = MoneyPipe.format(this.insufficientMatchFundsAvailable!.maxMatchable);
-        this.amountErrorMessage =
-          `There is only funding available to match donations of up to ${formattedMax}. ` +
-          'Please choose a smaller donation amount, or make an unmatched donation.';
-
         this.toast.showError(this.amountErrorMessage!);
       }
     }
@@ -622,4 +638,13 @@ export class RegularGivingComponent implements OnInit, AfterViewInit {
       this.homeAddress = address;
     });
   }
+}
+
+export function maximumMatchableDonationGivenCampaign(campaign: Pick<Campaign, 'currencyCode'|'matchFundsRemaining'>): Money {
+  const standardNumberOfDonationMatched = 3;
+
+  return {
+    currency: campaign.currencyCode,
+    amountInPence: Math.max(Math.floor(campaign.matchFundsRemaining / standardNumberOfDonationMatched), 0) * 100
+  };
 }

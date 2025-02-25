@@ -56,28 +56,40 @@
               </div>
               <p>This amount will be taken from your account today and once every month in future</p>
 
-              <div aria-live="polite" >
+              <div aria-live="polite">
+                @if (this.matchFundsZeroOnLoad) {
+                  <!-- no need to show any message here, the donor will read below that there are no match funds-->
+                } @else if (!this.unmatched) {
+                  <p>Your first three donations will be match-funded. </p>
+                } @else {
+                  <p>Your donations will not be match-funded.</p>
+                }
                 @if (amountErrorMessage) {
                   <div class="error">
                     {{ this.amountErrorMessage }}
                   </div>
                 }
-
-                @if (insufficientMatchFundsAvailable) {
+                @if (maximumMatchableDonation.amountInPence === 0) {
                   <p>
-                  @if (insufficientMatchFundsAvailable.maxMatchable.amountInPence === 0) {
                     There are no match funds currently available for this campaign. Remember, every penny helps.
-                      Please continue to make an <strong>unmatched donation</strong> to the charity!
-                  } @else {
-                    There are limited match funds available.
-                    Remember, every penny helps.
-                      Please donate up to {{insufficientMatchFundsAvailable.maxMatchable | money}}, or make an
-                    <strong>unmatched donation</strong> to the charity!
-                  }
+                    Please continue to make an <strong>unmatched donation</strong> to the charity!
+                    @if (!matchFundsZeroOnLoad) {
+                      <mat-checkbox formControlName="unmatched" id="unmatched">
+                        Make an unmatched donation
+                      </mat-checkbox>
+                    }
                   </p>
-                <mat-checkbox formControlName="unmatched" id="unmatched">
-                  Make an unmatched donation
-                </mat-checkbox>
+                } @else if (insufficientMatchFundsAvailable) {
+                  <p><span class="error">There are limited match funds available</span>, but every penny helps, so you
+                    have two options:</p>
+                  <ol>
+                    <li>Reduce your donation amount to a maximum of {{ maximumMatchableDonation | money }}, or</li>
+                    <li>
+                      <mat-checkbox formControlName="unmatched" id="unmatched">
+                        Make an unmatched donation
+                      </mat-checkbox>
+                    </li>
+                  </ol>
                 }
               </div>
 
